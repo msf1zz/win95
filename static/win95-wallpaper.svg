@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2f7fd4"/>
+      <stop offset="35%" stop-color="#5aa8eb"/>
+      <stop offset="58%" stop-color="#9fd4ff"/>
+      <stop offset="72%" stop-color="#b8e8a0"/>
+      <stop offset="100%" stop-color="#6fbf4a"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="42%" cy="38%" r="58%">
+      <stop offset="0%" stop-color="#fffef8"/>
+      <stop offset="50%" stop-color="#ffe566"/>
+      <stop offset="100%" stop-color="#ff9f3d"/>
+    </radialGradient>
+    <linearGradient id="hill-far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7ecf58"/>
+      <stop offset="100%" stop-color="#4a9232"/>
+    </linearGradient>
+    <linearGradient id="hill-near" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a8e870"/>
+      <stop offset="40%" stop-color="#7ecf58"/>
+      <stop offset="100%" stop-color="#3d7a28"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6fbf4a"/>
+      <stop offset="100%" stop-color="#2f6a22"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="50%" cy="45%" r="65%">
+      <stop offset="35%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0f325a" stop-opacity="0.22"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1600" height="1200" fill="url(#sky)"/>
+
+  <circle cx="1310" cy="175" r="105" fill="#ffe97a" opacity="0.14"/>
+  <circle cx="1310" cy="175" r="82" fill="url(#sun)" opacity="0.98"/>
+
+  <path d="M-40 755 Q 300 615, 680 695 T 1480 635 L 1600 755 L 1600 1200 L -40 1200 Z" fill="url(#hill-far)"/>
+  <path d="M-20 855 Q 460 695, 900 775 T 1640 715 L 1600 895 L 1600 1200 L -20 1200 Z" fill="url(#hill-near)"/>
+  <rect x="0" y="935" width="1600" height="265" fill="url(#ground)"/>
+
+  <path d="M0 935 Q 400 925, 800 933 T 1600 927" fill="none" stroke="#9ed66a" stroke-width="4" opacity="0.3"/>
+
+  <!-- wildflower specks -->
+  <g opacity="0.55">
+    <circle cx="320" cy="980" r="3" fill="#fff59d"/>
+    <circle cx="480" cy="1005" r="2.5" fill="#ffcc80"/>
+    <circle cx="620" cy="965" r="3" fill="#fff59d"/>
+    <circle cx="780" cy="990" r="2" fill="#ffab91"/>
+    <circle cx="940" cy="975" r="3" fill="#fff59d"/>
+    <circle cx="1100" cy="1000" r="2.5" fill="#ffcc80"/>
+    <circle cx="1260" cy="960" r="3" fill="#fff59d"/>
+    <circle cx="1420" cy="985" r="2" fill="#ffab91"/>
+  </g>
+
+  <rect width="1600" height="1200" fill="url(#vignette)"/>
+</svg>
