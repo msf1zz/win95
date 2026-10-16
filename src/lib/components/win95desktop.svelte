@@ -462,7 +462,7 @@ You can also launch programs from the Start menu or Run dialog.`);
 	.wallpaper {
 		position: absolute;
 		inset: 0;
-		background: #071833 url('/win95-wallpaper.svg') center / cover no-repeat;
+		background: #071833 url('/win95.webp') center / cover no-repeat;
 		image-rendering: pixelated;
 	}
 
