@@ -16,7 +16,7 @@
 		<button type="button">View</button>
 		<button type="button">Help</button>
 	</div>
-	<p class="msg">Recycle Bin is empty enough to be funny.</p>
+	<p class="msg">trash.</p>
 	<ul>
 		{#each items as item}
 			<li>
@@ -25,7 +25,7 @@
 			</li>
 		{/each}
 	</ul>
-	<p class="hint">Nothing here can be restored. That's the joke.</p>
+	<p class="hint">wow.</p>
 </div>
 
 <style>

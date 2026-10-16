@@ -224,9 +224,6 @@
 			{/each}
 		</div>
 	</div>
-	<div class="w95-status">
-		<span>{status || 'Tap open · hold to flag'}</span>
-	</div>
 </div>
 
 <style>

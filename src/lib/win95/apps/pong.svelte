@@ -6,7 +6,6 @@
 	let canvas: HTMLCanvasElement;
 	let p1score = $state(0);
 	let p2score = $state(0);
-	let status = $state('W/S or swipe ↑↓ · first to 7 wins');
 	let paddleUp = $state(false);
 	let paddleDown = $state(false);
 
@@ -33,7 +32,6 @@
 
 		function resetMatch() {
 			p1score = p2score = 0;
-			status = 'W/S or swipe ↑↓ · first to 7 wins';
 			resetBall();
 		}
 

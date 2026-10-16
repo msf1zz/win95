@@ -3,8 +3,7 @@
 
 	let text = $state(`Welcome to Windows 95 Notepad
 
-Type anything. Nobody is watching.
-Maybe draft your victory speech after Stick Fighter.
+no bloat
 `);
 </script>
 

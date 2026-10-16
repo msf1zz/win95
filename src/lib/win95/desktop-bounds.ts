@@ -1,6 +1,5 @@
 export type desktoparea = { w: number; h: number };
 
-/** Measure the usable desktop pane (above the taskbar). */
 export function measureDesktopArea(
 	desktop: HTMLElement | null | undefined,
 	taskbar: HTMLElement | null | undefined

@@ -6,9 +6,8 @@
 	<title>Windows 95</title>
 	<meta
 		name="description"
-		content="A Windows 95 desktop in the browser, with classic games and accessories."
+		content="A win95 that can run programs."
 	/>
-	<link rel="icon" href="/win95-wallpaper.svg" type="image/svg+xml" />
 </svelte:head>
 
 <Win95desktop />

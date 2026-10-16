@@ -32,9 +32,7 @@ type sample = { x: number; y: number; t: number };
 function haptic(ms = 8) {
 	try {
 		navigator.vibrate?.(ms);
-	} catch {
-		/* unsupported */
-	}
+	} catch {}
 }
 
 function resolveDir(dx: number, dy: number, ratio: number): swipedir | null {

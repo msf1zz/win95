@@ -3,6 +3,8 @@
 	import { bindswipegestures } from '$lib/utils/swipe-gestures';
 	import '../win95.css';
 
+	let { onclose }: { onclose?: () => void } = $props();
+
 	let canvas: HTMLCanvasElement;
 	let status = $state('Click enemy to attack · pick up weapons · A/D move');
 	let round = $state(1);
@@ -84,7 +86,7 @@
 		let w = 0;
 		let h = 0;
 		let raf = 0;
-		let shake = 0;
+		let closeTimer = 0;
 		let flash = 0;
 		let pickupId = 0;
 		let spawnT = 0;
@@ -98,12 +100,6 @@
 		const particles: particle[] = [];
 		const floats: floattext[] = [];
 		const impacts: impact[] = [];
-		const dust: { x: number; y: number; s: number; sp: number }[] = Array.from({ length: 24 }, (_, i) => ({
-			x: Math.random(),
-			y: Math.random() * 0.7,
-			s: 0.4 + Math.random() * 1.2,
-			sp: 0.0004 + Math.random() * 0.001
-		}));
 
 		const GROUND = () => h - 42;
 
@@ -227,7 +223,6 @@
 			target.vx = (target.x > src.x ? 1 : -1) * (4 + dmg * 0.15);
 			target.vy = -4 - dmg * 0.08;
 			target.onGround = false;
-			shake = Math.min(14, shake + dmg * 0.35);
 			flash = 4;
 			burst(target.x, target.y - 40, src.weapon.color, 12);
 			dmgText(target.x, target.y - 72, dmg, dmg >= 18);
@@ -324,7 +319,6 @@
 				return;
 			}
 
-			// resolve hits during attack frames
 			if (f.action === 'punch') {
 				tryHit(f, opp, f.weapon.reach, f.weapon.dmg, 50, 40);
 			} else if (f.action === 'kick') {
@@ -373,7 +367,6 @@
 				f.facing = f.x < opp.x ? 1 : -1;
 			}
 
-			// pickup collision
 			for (let i = pickups.length - 1; i >= 0; i--) {
 				const p = pickups[i];
 				if (Math.abs(f.x - p.x) < 22 && f.onGround) {
@@ -399,271 +392,276 @@
 			tickFighter(p2, p1, left, right, jump);
 		}
 
-		function drawWeapon(f: fighter, x: number, y: number, dir: number, action: action, t: number) {
-			const wpn = f.weapon;
-			if (wpn.kind === 'fists') return;
-
-			ctx.save();
-			ctx.translate(x, y);
-			ctx.scale(dir, 1);
-			ctx.strokeStyle = wpn.color;
-			ctx.fillStyle = wpn.color;
-			ctx.lineWidth = 3;
-
-			let angle = -0.4;
-			if (action === 'swing') angle = -1.2 + (14 - t) * 0.12;
-			else if (action === 'punch') angle = -0.2;
-			ctx.rotate(angle);
-
-			if (wpn.kind === 'bat') {
-				ctx.fillRect(8, -4, 34, 8);
-				ctx.fillStyle = '#5a3d20';
-				ctx.fillRect(6, -3, 8, 6);
-			} else if (wpn.kind === 'sword') {
-				ctx.beginPath();
-				ctx.moveTo(6, 2);
-				ctx.lineTo(42, -2);
-				ctx.lineTo(40, 2);
-				ctx.closePath();
-				ctx.fill();
-				ctx.fillStyle = '#444';
-				ctx.fillRect(2, -2, 8, 6);
-			} else if (wpn.kind === 'hammer') {
-				ctx.fillStyle = '#666';
-				ctx.fillRect(4, -2, 22, 5);
-				ctx.fillStyle = '#444';
-				ctx.fillRect(20, -10, 16, 14);
+		function stamp(cells: Map<string, string>, ox: number, oy: number, dir: number, outline: string) {
+			const keys = new Set(cells.keys());
+			ctx.fillStyle = outline;
+			for (const key of keys) {
+				const [x, y] = key.split(',').map(Number);
+				for (const [dx, dy] of [
+					[1, 0],
+					[-1, 0],
+					[0, 1],
+					[0, -1]
+				]) {
+					if (keys.has(`${x + dx},${y + dy}`)) continue;
+					const nx = x + dx;
+					const sx = dir > 0 ? ox + nx : ox - nx - 1;
+					ctx.fillRect(sx, oy + y + dy, 1, 1);
+				}
 			}
-			ctx.restore();
+			for (const [key, color] of cells) {
+				const [x, y] = key.split(',').map(Number);
+				const sx = dir > 0 ? ox + x : ox - x - 1;
+				ctx.fillStyle = color;
+				ctx.fillRect(sx, oy + y, 1, 1);
+			}
 		}
 
-		function drawStick(f: fighter, color: string, name: string, hitFlash: number, isP1: boolean) {
-			const t = f.actionT;
-			const bob = f.action === 'walk' ? Math.sin(frame / 7) * 5 : 0;
-			const sx = shake ? (Math.random() - 0.5) * shake : 0;
-			const x = f.x + sx;
-			const y = f.y + bob;
+		function drawWeapon(f: fighter, ox: number, oy: number, dir: number, hand: [number, number]) {
+			const kind = f.weapon.kind;
+			if (kind === 'fists') return;
+			const cells = new Map<string, string>();
+			const col = kind === 'bat' ? '#e6c27a' : kind === 'sword' ? '#e7f4ff' : '#b9b9b9';
+			const dark = kind === 'bat' ? '#8a5a28' : kind === 'sword' ? '#f2d35a' : '#6e6e6e';
+			const dx = hand[0];
+			const dy = hand[1] + 52;
+			const len = Math.hypot(dx, dy) || 1;
+			const reach = kind === 'hammer' ? 16 : kind === 'sword' ? 26 : 22;
+			const x1 = Math.round(hand[0] + (dx / len) * reach);
+			const y1 = Math.round(hand[1] + (dy / len) * reach);
+			let x = hand[0];
+			let y = hand[1];
+			const sx = x < x1 ? 1 : -1;
+			const sy = y < y1 ? 1 : -1;
+			const adx = Math.abs(x1 - x);
+			const ady = Math.abs(y1 - y);
+			let err = adx - ady;
+			let step = 0;
+			while (true) {
+				const tone = step < 5 ? dark : col;
+				for (let iy = -1; iy <= 1; iy++) {
+					for (let ix = -1; ix <= 1; ix++) cells.set(`${x + ix},${y + iy}`, tone);
+				}
+				if (x === x1 && y === y1) break;
+				const e2 = 2 * err;
+				if (e2 > -ady) {
+					err -= ady;
+					x += sx;
+				}
+				if (e2 < adx) {
+					err += adx;
+					y += sy;
+				}
+				step += 1;
+			}
+			if (kind === 'hammer') {
+				for (let iy = -4; iy <= 3; iy++) {
+					for (let ix = -2; ix <= 5; ix++) cells.set(`${x1 + ix},${y1 + iy}`, iy < -2 ? '#efefef' : '#8d8d8d');
+				}
+			} else if (kind === 'bat') {
+				for (let iy = -2; iy <= 2; iy++) {
+					for (let ix = -1; ix <= 3; ix++) cells.set(`${x1 + ix},${y1 + iy}`, '#f3e2b4');
+				}
+			}
+			stamp(cells, ox, oy, dir, '#120c08');
+		}
+
+		function drawStick(f: fighter, color: string, _name: string, hitFlash: number, isP1: boolean) {
+			const bob = f.action === 'walk' ? (Math.floor(frame / 8) % 2 === 0 ? -1 : 1) : 0;
+			const x = Math.round(f.x);
+			const y = Math.round(f.y) + bob;
 			const dir = f.facing;
-			const attacking = f.action === 'punch' || f.action === 'kick' || f.action === 'swing';
+			const step = Math.floor(frame / 8) % 2;
+			const flashOn = hitFlash > 0 && hitFlash % 2 === 0;
+			const body = flashOn ? '#ffffff' : color;
+			const shade = flashOn ? '#f2f2f2' : isP1 ? '#1b86d8' : '#e24c1a';
+			const glove = flashOn ? '#ffffff' : isP1 ? '#d9f4ff' : '#ffd2b8';
+			const band = isP1 ? '#ff4d88' : '#ffe14a';
+			const outline = isP1 ? '#071018' : '#1c0c08';
+			const cells = new Map<string, string>();
 
-			// shadow
-			const shdw = ctx.createRadialGradient(x, y + 4, 2, x, y + 4, 22);
-			shdw.addColorStop(0, 'rgba(0,0,0,0.45)');
-			shdw.addColorStop(1, 'rgba(0,0,0,0)');
-			ctx.fillStyle = shdw;
-			ctx.beginPath();
-			ctx.ellipse(x, y + 4, 22, 6, 0, 0, Math.PI * 2);
-			ctx.fill();
+			function put(px: number, py: number, fill: string) {
+				cells.set(`${px},${py}`, fill);
+			}
 
-			if (attacking) {
-				ctx.strokeStyle = `${color}44`;
-				ctx.lineWidth = 2;
-				for (let i = 0; i < 3; i++) {
-					ctx.beginPath();
-					ctx.moveTo(x - dir * (20 + i * 14), y - 30 + i * 6);
-					ctx.lineTo(x - dir * (48 + i * 18), y - 26 + i * 6);
-					ctx.stroke();
+			function blob(cx: number, cy: number, fill: string) {
+				for (let iy = -1; iy <= 1; iy++) {
+					for (let ix = -1; ix <= 1; ix++) {
+						const px = cx + ix;
+						put(px, cy + iy, fill === body && px < -1 ? shade : fill);
+					}
 				}
 			}
 
-			if (hitFlash > 0) {
-				ctx.fillStyle = `rgba(255,255,255,${hitFlash * 0.09})`;
-				ctx.beginPath();
-				ctx.arc(x, y - 36, 34, 0, Math.PI * 2);
-				ctx.fill();
+			function limb(x0: number, y0: number, x1: number, y1: number, fill: string) {
+				let lx = x0;
+				let ly = y0;
+				const adx = Math.abs(x1 - x0);
+				const ady = Math.abs(y1 - y0);
+				const sx = x0 < x1 ? 1 : -1;
+				const sy = y0 < y1 ? 1 : -1;
+				let err = adx - ady;
+				while (true) {
+					blob(lx, ly, fill);
+					if (lx === x1 && ly === y1) break;
+					const e2 = 2 * err;
+					if (e2 > -ady) {
+						err -= ady;
+						lx += sx;
+					}
+					if (e2 < adx) {
+						err += adx;
+						ly += sy;
+					}
+				}
 			}
 
-			ctx.save();
-			ctx.shadowColor = color;
-			ctx.shadowBlur = attacking ? 16 : 8;
-			ctx.strokeStyle = color;
-			ctx.lineWidth = 3.5;
-			ctx.lineCap = 'round';
+			function rect(rx: number, ry: number, rw: number, rh: number, fill: string) {
+				for (let iy = 0; iy < rh; iy++) {
+					for (let ix = 0; ix < rw; ix++) put(rx + ix, ry + iy, fill);
+				}
+			}
 
-			ctx.fillStyle = color;
-			ctx.beginPath();
-			ctx.arc(x, y - 60, 10, 0, Math.PI * 2);
-			ctx.fill();
-			ctx.fillStyle = isP1 ? '#ff6b9d' : '#ff4444';
-			ctx.fillRect(x - 10, y - 68, 20, 5);
-			// eyes
-			ctx.fillStyle = '#111';
-			ctx.fillRect(x + dir * 3 - 5, y - 62, 3, 3);
-			ctx.fillRect(x + dir * 3 + 2, y - 62, 3, 3);
-
-			ctx.beginPath();
-			ctx.moveTo(x, y - 50);
-			ctx.lineTo(x, y - 24);
-			ctx.stroke();
-
-			let armL = -20;
-			let armR = 20;
-			let legL = -14;
-			let legR = 14;
+			let backHand: [number, number];
+			let frontHand: [number, number];
+			let backFoot: [number, number];
+			let frontFoot: [number, number];
 
 			if (f.action === 'punch') {
-				armR = 34 + (12 - t) * 2;
-				armL = -14;
+				backHand = [-10, -46];
+				frontHand = [24, -50];
+				backFoot = [-6, -2];
+				frontFoot = [8, -2];
 			} else if (f.action === 'kick') {
-				legR = 32 + (16 - t) * 2;
-				legL = -10;
+				backHand = [-12, -60];
+				frontHand = [8, -56];
+				backFoot = [-6, -2];
+				frontFoot = [22, -18];
 			} else if (f.action === 'swing') {
-				armR = 38;
-				armL = -8;
-			} else if (f.action === 'walk') {
-				legL = Math.sin(frame / 6) * 18;
-				legR = -Math.sin(frame / 6) * 18;
+				backHand = [-8, -48];
+				frontHand = [14, -70];
+				backFoot = [-7, -2];
+				frontFoot = [7, -2];
 			} else if (f.action === 'jump') {
-				legL = -10;
-				legR = 12;
-				armL = -26;
-				armR = 26;
+				backHand = [-10, -68];
+				frontHand = [10, -68];
+				backFoot = [-8, -20];
+				frontFoot = [8, -20];
 			} else if (f.action === 'hit') {
-				armL = -34;
-				armR = 30;
-				ctx.globalAlpha = 0.85;
+				backHand = [-16, -62];
+				frontHand = [14, -40];
+				backFoot = [-2, -2];
+				frontFoot = [11, -2];
+			} else if (f.action === 'walk' && step === 0) {
+				backHand = [-12, -58];
+				frontHand = [12, -34];
+				backFoot = [-4, -2];
+				frontFoot = [12, -2];
+			} else if (f.action === 'walk') {
+				backHand = [-10, -34];
+				frontHand = [10, -58];
+				backFoot = [-12, -2];
+				frontFoot = [4, -2];
+			} else {
+				backHand = [-11, -40];
+				frontHand = [11, -40];
+				backFoot = [-6, -2];
+				frontFoot = [6, -2];
 			}
 
-			ctx.beginPath();
-			ctx.moveTo(x, y - 44);
-			ctx.lineTo(x + armL * dir * 0.45, y - 36 + armL * 0.12);
-			ctx.moveTo(x, y - 44);
-			ctx.lineTo(x + armR * dir * 0.55, y - 38 + armR * 0.08);
-			ctx.stroke();
+			limb(-1, -54, backHand[0], backHand[1], body);
+			limb(0, -34, backFoot[0], backFoot[1], body);
+			limb(1, -52, frontHand[0], frontHand[1], body);
+			limb(0, -32, frontFoot[0], frontFoot[1], body);
+			limb(0, -62, 0, -32, body);
+			for (const [hy, hx, hw] of [
+				[-76, -2, 5],
+				[-75, -4, 9],
+				[-74, -5, 11],
+				[-73, -6, 13],
+				[-72, -6, 13],
+				[-71, -6, 13],
+				[-70, -6, 13],
+				[-69, -6, 13],
+				[-68, -6, 13],
+				[-67, -5, 11],
+				[-66, -4, 9],
+				[-65, -2, 5]
+			] as [number, number, number][]) {
+				for (let i = 0; i < hw; i++) {
+					const px = hx + i;
+					put(px, hy, px < -1 ? shade : body);
+				}
+			}
+			for (let hy = -76; hy <= -73; hy++) {
+				for (let hx = -6; hx <= 6; hx++) {
+					if (cells.has(`${hx},${hy}`)) put(hx, hy, band);
+				}
+			}
+			put(-4, -75, '#f7fbff');
+			put(-3, -75, '#f7fbff');
+			rect(1, -71, 2, 2, '#12141a');
+			rect(4, -71, 2, 2, '#12141a');
+			rect(backFoot[0] - 2, backFoot[1] - 1, 6, 3, '#171717');
+			rect(frontFoot[0] - 2, frontFoot[1] - 1, 6, 3, '#171717');
+			rect(backHand[0] - 2, backHand[1] - 2, 4, 4, glove);
+			rect(frontHand[0] - 2, frontHand[1] - 2, 4, 4, glove);
 
-			drawWeapon(f, x + armR * dir * 0.55, y - 38, dir, f.action, t);
+			ctx.fillStyle = 'rgba(0,0,0,0.35)';
+			ctx.fillRect(x - 9, y - 1, 18, 2);
+			ctx.fillRect(x - 5, y - 2, 10, 1);
 
-			ctx.beginPath();
-			ctx.moveTo(x, y - 24);
-			ctx.lineTo(x + legL * dir * 0.55, y);
-			ctx.moveTo(x, y - 24);
-			ctx.lineTo(x + legR * dir * 0.55, y);
-			ctx.stroke();
-			ctx.restore();
+			drawWeapon(f, x, y, dir, frontHand);
+			stamp(cells, x, y, dir, outline);
 		}
 
 		function drawPickup(p: pickup) {
-			const y = GROUND() - 14 + Math.sin(frame / 18 + p.bob) * 5;
-			const def = WEAPONS[p.kind];
-			const pulse = 0.5 + Math.sin(frame / 10) * 0.5;
-
-			const beam = ctx.createLinearGradient(p.x, y - 40, p.x, y);
-			beam.addColorStop(0, 'rgba(255,255,180,0)');
-			beam.addColorStop(1, `${def.color}55`);
-			ctx.fillStyle = beam;
-			ctx.fillRect(p.x - 8, y - 40, 16, 40);
-
-			ctx.save();
-			ctx.translate(p.x, y);
-			ctx.rotate(frame / 20);
-			ctx.strokeStyle = `rgba(255,230,120,${0.35 + pulse * 0.35})`;
-			ctx.lineWidth = 2;
-			ctx.strokeRect(-16, -12, 32, 24);
-			ctx.restore();
-
-			const crate = ctx.createLinearGradient(p.x - 15, y - 11, p.x + 15, y + 11);
-			crate.addColorStop(0, '#3a3050');
-			crate.addColorStop(1, '#1a1428');
-			ctx.fillStyle = crate;
-			ctx.fillRect(p.x - 15, y - 11, 30, 22);
-			ctx.strokeStyle = def.color;
-			ctx.lineWidth = 2;
-			ctx.strokeRect(p.x - 15, y - 11, 30, 22);
-			ctx.fillStyle = def.color;
-			ctx.font = 'bold 9px Tahoma';
-			ctx.textAlign = 'center';
-			ctx.fillText(def.label, p.x, y + 4);
+			const y = GROUND() - 6 + (Math.floor(frame / 18 + p.bob) % 2 === 0 ? 0 : -1);
+			const x = Math.round(p.x);
+			ctx.fillStyle = 'rgba(0,0,0,0.35)';
+			ctx.fillRect(x - 8, y + 1, 16, 2);
+			if (p.kind === 'bat') {
+				ctx.fillStyle = '#8a5a28';
+				ctx.fillRect(x - 8, y - 2, 4, 3);
+				ctx.fillStyle = '#e6c27a';
+				ctx.fillRect(x - 4, y - 3, 12, 5);
+			} else if (p.kind === 'sword') {
+				ctx.fillStyle = '#f2d35a';
+				ctx.fillRect(x - 8, y - 4, 3, 8);
+				ctx.fillStyle = '#e7f4ff';
+				ctx.fillRect(x - 5, y - 2, 14, 2);
+			} else {
+				ctx.fillStyle = '#6e6e6e';
+				ctx.fillRect(x - 8, y - 1, 8, 3);
+				ctx.fillStyle = '#b9b9b9';
+				ctx.fillRect(x - 1, y - 5, 8, 8);
+			}
 		}
 
 		function drawArena() {
 			const g = GROUND();
-			const sky = ctx.createLinearGradient(0, 0, 0, g);
-			sky.addColorStop(0, '#0c0820');
-			sky.addColorStop(0.45, '#1e1240');
-			sky.addColorStop(1, '#2a1848');
-			ctx.fillStyle = sky;
+			ctx.fillStyle = '#12141f';
 			ctx.fillRect(0, 0, w, h);
+			ctx.fillStyle = '#1a1e30';
+			const horizon = Math.floor(g * 0.62);
+			ctx.fillRect(0, horizon, w, g - horizon);
 
-			ctx.fillStyle = '#08051a';
-			for (let i = 0; i < 18; i++) {
-				const bx = (i * 73 + 10) % (w + 40) - 20;
-				const bh = 30 + (i % 5) * 18;
-				ctx.fillRect(bx, g - 120 - bh, 36 + (i % 3) * 12, bh);
+			ctx.fillStyle = '#c5cdea';
+			for (let i = 0; i < 14; i++) {
+				const sx = (i * 149 + 17) % Math.max(1, w - 2);
+				const sy = (i * 47 + 10) % Math.max(1, horizon - 4);
+				ctx.fillRect(sx, sy, 2, 2);
 			}
 
-			for (let i = 0; i < 4; i++) {
-				const lx = w * (0.15 + i * 0.23) + Math.sin(frame / 40 + i) * 30;
-				const spot = ctx.createRadialGradient(lx, -10, 8, lx, g * 0.55, g * 0.85);
-				spot.addColorStop(0, 'rgba(255,210,100,0.22)');
-				spot.addColorStop(0.5, 'rgba(255,120,180,0.08)');
-				spot.addColorStop(1, 'rgba(255,120,180,0)');
-				ctx.fillStyle = spot;
-				ctx.fillRect(0, 0, w, g);
-			}
-
-			for (const d of dust) {
-				d.y -= d.sp;
-				if (d.y < 0) d.y = 0.85;
-				ctx.fillStyle = `rgba(255,220,180,${0.08 + d.s * 0.06})`;
-				ctx.fillRect(d.x * w + Math.sin(frame / 30 + d.x * 10) * 12, d.y * g, d.s, d.s);
-			}
-
-			for (let row = 0; row < 4; row++) {
-				for (let i = 0; i < 28; i++) {
-					const cx = (i * (w / 28) + row * 11) % w;
-					const cy = 18 + row * 12 + Math.sin(frame / 20 + i + row) * 2;
-					const hue = (i * 37 + row * 60) % 360;
-					ctx.fillStyle = `hsl(${hue} 55% ${42 + row * 6}%)`;
-					ctx.fillRect(cx, cy, 7, 11);
-				}
-			}
-
-			const mat = ctx.createLinearGradient(0, g, 0, h);
-			mat.addColorStop(0, '#4a6741');
-			mat.addColorStop(1, '#2d4228');
-			ctx.fillStyle = mat;
+			ctx.fillStyle = '#232838';
 			ctx.fillRect(0, g, w, h - g);
-			for (let i = 0; i < w; i += 16) {
-				ctx.fillStyle = i % 32 === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
-				ctx.fillRect(i, g + 8, 16, h - g - 8);
-			}
-			ctx.fillStyle = '#6b4b35';
-			ctx.fillRect(0, g, w, 10);
-
-			ctx.font = 'bold 13px Tahoma';
-			ctx.textAlign = 'center';
-			ctx.fillStyle = 'rgba(255,60,120,0.35)';
-			ctx.fillText('VOID ARENA', w / 2 + 1, g - 108);
-			ctx.fillStyle = '#ff5c9a';
-			ctx.shadowColor = '#ff5c9a';
-			ctx.shadowBlur = 8 + Math.sin(frame / 8) * 4;
-			ctx.fillText('VOID ARENA', w / 2, g - 109);
-			ctx.shadowBlur = 0;
-
-			ctx.strokeStyle = '#ff3d6a';
-			ctx.lineWidth = 3;
-			for (let i = 0; i < 3; i++) {
-				const ry = g - 98 - i * 28;
-				ctx.beginPath();
-				ctx.moveTo(14, ry);
-				ctx.lineTo(w - 14, ry);
-				ctx.stroke();
-			}
-
-			[[18, g - 98], [w - 18, g - 98]].forEach(([px, py]) => {
-				const post = ctx.createLinearGradient(px, py, px, g);
-				post.addColorStop(0, '#e8c547');
-				post.addColorStop(1, '#8a6420');
-				ctx.fillStyle = post;
-				ctx.fillRect(px - 5, py, 10, g - py + 6);
-				ctx.fillStyle = '#ccc';
-				ctx.beginPath();
-				ctx.arc(px, py, 5, 0, Math.PI * 2);
-				ctx.fill();
-			});
+			ctx.fillStyle = '#3c4560';
+			ctx.fillRect(0, g, w, 2);
+			ctx.fillStyle = '#1b2030';
+			for (let tx = 10; tx < w; tx += 32) ctx.fillRect(tx, g + 12, 12, 2);
 
 			if (flash > 0) {
-				ctx.fillStyle = `rgba(255,60,100,${flash * 0.09})`;
+				ctx.fillStyle = `rgba(255,60,100,${flash * 0.12})`;
 				ctx.fillRect(0, 0, w, h);
 				flash -= 0.35;
 			}
@@ -702,7 +700,6 @@
 
 			ctx.save();
 			ctx.translate(w / 2, pad + 24);
-			ctx.rotate(Math.sin(frame / 25) * 0.08);
 			ctx.fillStyle = '#1a1030';
 			ctx.fillRect(-22, -12, 44, 24);
 			ctx.strokeStyle = '#ffe566';
@@ -726,13 +723,8 @@
 		}
 
 		function drawPostfx() {
-			const vig = ctx.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.75);
-			vig.addColorStop(0, 'rgba(0,0,0,0)');
-			vig.addColorStop(1, 'rgba(0,0,0,0.45)');
-			ctx.fillStyle = vig;
-			ctx.fillRect(0, 0, w, h);
-			ctx.fillStyle = 'rgba(0,0,0,0.06)';
-			for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
+			ctx.fillStyle = 'rgba(0,0,0,0.08)';
+			for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1);
 		}
 
 		function drawIntro() {
@@ -758,8 +750,8 @@
 		}
 
 		function draw() {
+			ctx.imageSmoothingEnabled = false;
 			ctx.save();
-			if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake * 0.6);
 
 			drawArena();
 			drawHud();
@@ -768,33 +760,28 @@
 			drawStick(p2, '#ff7b5c', 'CPU', p2HitFlash, false);
 
 			for (const imp of impacts) {
-				const r = (1 - imp.life / imp.max) * 28;
+				const r = Math.round((1 - imp.life / imp.max) * 12) * 2;
 				ctx.save();
 				ctx.globalAlpha = imp.life / imp.max;
 				ctx.strokeStyle = imp.color;
 				ctx.lineWidth = 2;
-				ctx.beginPath();
-				ctx.arc(imp.x, imp.y, r, 0, Math.PI * 2);
-				ctx.stroke();
+				ctx.strokeRect(Math.round(imp.x) - r, Math.round(imp.y) - r, r * 2, r * 2);
 				ctx.restore();
 			}
 
 			for (const p of particles) {
+				const sz = Math.max(2, Math.round(p.size / 2) * 2);
 				if (p.kind === 'ring') {
 					ctx.save();
 					ctx.globalAlpha = p.life / 10;
 					ctx.strokeStyle = p.color;
 					ctx.lineWidth = 2;
-					ctx.beginPath();
-					ctx.arc(p.x, p.y, p.size + (10 - p.life) * 2, 0, Math.PI * 2);
-					ctx.stroke();
+					const r = Math.round((p.size + (10 - p.life) * 2) / 2) * 2;
+					ctx.strokeRect(Math.round(p.x) - r, Math.round(p.y) - r, r * 2, r * 2);
 					ctx.restore();
 				} else {
 					ctx.fillStyle = p.color;
-					ctx.shadowColor = p.color;
-					ctx.shadowBlur = 4;
-					ctx.fillRect(p.x, p.y, p.size, p.size);
-					ctx.shadowBlur = 0;
+					ctx.fillRect(Math.round(p.x), Math.round(p.y), sz, sz);
 				}
 			}
 
@@ -830,27 +817,16 @@
 			drawIntro();
 
 			if (p1.hp <= 0 || p2.hp <= 0) {
-				ctx.fillStyle = 'rgba(8,4,20,0.72)';
-				ctx.fillRect(0, 0, w, h);
-				const win = p1.hp > 0;
 				ctx.font = 'bold 34px Tahoma';
 				ctx.textAlign = 'center';
-				ctx.fillStyle = 'rgba(0,0,0,0.55)';
-				ctx.fillText('K.O.', w / 2 + 2, h / 2 - 14);
-				ctx.fillStyle = win ? '#9ad4ff' : '#ff7b5c';
-				ctx.shadowColor = ctx.fillStyle as string;
-				ctx.shadowBlur = 18;
-				ctx.fillText(win ? 'YOU WIN!' : 'CPU WINS!', w / 2, h / 2 + 18);
+				ctx.fillStyle = '#fff';
 				ctx.shadowBlur = 0;
-				ctx.font = '12px Tahoma';
-				ctx.fillStyle = '#ddd';
-				ctx.fillText('click or press R — rematch', w / 2, h / 2 + 48);
+				ctx.fillText('you lost', w / 2, h / 2);
 			}
 
 			ctx.restore();
 			drawPostfx();
 
-			if (shake > 0) shake *= 0.82;
 			if (p1HitFlash > 0) p1HitFlash -= 1;
 			if (p2HitFlash > 0) p2HitFlash -= 1;
 			if (roundIntro > 0) roundIntro -= 1;
@@ -902,16 +878,19 @@
 			}
 
 			frame += 1;
-			status = `R${round} · YOU ${Math.ceil(p1.hp)} · CPU ${Math.ceil(p2.hp)} · ${weaponLabel} · combo ×${p1.combo}`;
+			const lost = p1.hp <= 0 || p2.hp <= 0;
+			status = lost
+				? 'you lost'
+				: `R${round} · YOU ${Math.ceil(p1.hp)} · CPU ${Math.ceil(p2.hp)} · ${weaponLabel} · combo ×${p1.combo}`;
+			if (lost && !closeTimer) {
+				closeTimer = window.setTimeout(() => onclose?.(), 900);
+			}
 			draw();
 			raf = requestAnimationFrame(step);
 		}
 
 		function handleCanvasTap(p: { x: number; y: number }) {
-			if (p1.hp <= 0 || p2.hp <= 0) {
-				rematch();
-				return;
-			}
+			if (p1.hp <= 0 || p2.hp <= 0) return;
 
 			const dist = Math.abs(p1.x - p2.x);
 			const clickOpp = p.x > w * 0.5 || Math.abs(p.x - p2.x) < 50;
@@ -927,16 +906,9 @@
 			}
 		}
 
-		function rematch() {
-			if (p1.hp > 0 && p2.hp > 0) return;
-			round += 1;
-			resetFight(true);
-		}
-
 		function onkeydown(ev: KeyboardEvent) {
 			const k = ev.key.toLowerCase();
 			keys.add(k);
-			if (k === 'r') rematch();
 			if (k === 'z' || k === 'j') pendingPunch = true;
 			if (k === 'x' || k === 'k') pendingKick = true;
 			if (k === 'c' || k === 'l') pendingSwing = true;
@@ -953,10 +925,7 @@
 				handleCanvasTap(p);
 			},
 			onswipe(dir) {
-				if (p1.hp <= 0 || p2.hp <= 0) {
-					rematch();
-					return;
-				}
+				if (p1.hp <= 0 || p2.hp <= 0) return;
 				if (dir === 'left') moveTarget = Math.max(40, p1.x - 90);
 				else if (dir === 'right') moveTarget = Math.min(w - 40, p1.x + 90);
 				else if (dir === 'up') pendingJump = true;
@@ -983,6 +952,7 @@
 
 		return () => {
 			cancelAnimationFrame(raf);
+			clearTimeout(closeTimer);
 			gestures.cleanup();
 			window.removeEventListener('keydown', onkeydown);
 			window.removeEventListener('keyup', onkeyup);
@@ -1004,17 +974,13 @@
 	</div>
 
 	<div class="w95-toolbar fight-bar">
-		<button type="button" class="w95-btn atk" onclick={punch} title="Punch — or click enemy">👊 Punch</button>
-		<button type="button" class="w95-btn atk" onclick={kick} title="Kick">🦵 Kick</button>
-		<button type="button" class="w95-btn atk swing" onclick={swing} title="Weapon swing">⚔ Swing</button>
-		<span class="w95-sep"></span>
-		<span class="wpn-badge">🗡 {weaponLabel}</span>
-		<span class="hint">Tap to fight · swipe ←→ move · ↑ jump · ↓ kick</span>
+		<button type="button" class="w95-btn atk" onclick={punch} title="Punch — or click enemy">Punch</button>
+		<button type="button" class="w95-btn atk" onclick={kick} title="Kick">Kick</button>
+		<button type="button" class="w95-btn atk swing" onclick={swing} title="Weapon swing">Swing</button>
 	</div>
 
 	<div class="w95-workspace arena-wrap">
 		<div class="arcade-bezel">
-			<div class="bezel-top">★ STICK FIGHTER — VOID CHAMPIONSHIP ★</div>
 			<canvas bind:this={canvas} class="w95-canvas fight-canvas"></canvas>
 			{#if comboDisplay > 1}
 				<div class="combo-pill">×{comboDisplay} combo</div>
@@ -1043,18 +1009,6 @@
 
 	.atk.swing {
 		color: #000080;
-	}
-
-	.wpn-badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		padding: 2px 8px;
-		border: 1px solid #808080;
-		box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a;
-		background: #ffffe1;
-		font-weight: 700;
-		font-size: 10px;
 	}
 
 	.hint {
@@ -1148,12 +1102,6 @@
 			flex: 1 1 calc(33% - 6px);
 			min-height: 40px;
 			font-size: 11px;
-		}
-
-		.wpn-badge {
-			flex: 1 1 100%;
-			justify-content: center;
-			min-height: 28px;
 		}
 
 		.bezel-top {

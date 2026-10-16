@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import type { Snippet } from 'svelte';
 	import { iconfor } from '$lib/win95/icons';
 	import { fitDesktopWindow, measureDesktopArea } from '$lib/win95/desktop-bounds';
@@ -57,11 +57,14 @@
 		return fitDesktopWindow({ w: areaW, h: areaH }, width, height, 0, PAD);
 	});
 
-	$effect.pre(() => {
-		if (!dragging) {
-			posX = layout.x;
-			posY = layout.y;
-		}
+	$effect(() => {
+		const w = areaW;
+		const h = areaH;
+		if (w <= 0 || h <= 0) return;
+		if (untrack(() => dragging)) return;
+		const next = clampPos(untrack(() => posX), untrack(() => posY));
+		posX = next.x;
+		posY = next.y;
 	});
 
 	function desktop(): HTMLElement | null {
@@ -75,13 +78,15 @@
 		const maxW = host?.clientWidth ?? areaW;
 		const maxH = host?.clientHeight ?? areaH;
 		return {
-			x: Math.min(Math.max(0, nx), Math.max(0, maxW - winW)),
-			y: Math.min(Math.max(0, ny), Math.max(0, maxH - winH))
+			x: Math.round(Math.min(Math.max(0, nx), Math.max(0, maxW - winW))),
+			y: Math.round(Math.min(Math.max(0, ny), Math.max(0, maxH - winH)))
 		};
 	}
 
 	function startDrag(ev: PointerEvent) {
+		if (ev.button !== 0 || dragging) return;
 		if ((ev.target as HTMLElement).closest('button')) return;
+		ev.preventDefault();
 		onfocus();
 		dragging = true;
 		const host = desktop();
@@ -90,7 +95,9 @@
 		const top = rect?.top ?? 0;
 		dragOffsetX = ev.clientX - left - posX;
 		dragOffsetY = ev.clientY - top - posY;
-		(ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
+		window.addEventListener('pointermove', moveDrag);
+		window.addEventListener('pointerup', endDrag);
+		window.addEventListener('pointercancel', endDrag);
 	}
 
 	function moveDrag(ev: PointerEvent) {
@@ -104,15 +111,15 @@
 		posY = next.y;
 	}
 
-	function endDrag(ev: PointerEvent) {
+	function endDrag() {
 		if (!dragging) return;
 		dragging = false;
-		try {
-			(ev.currentTarget as HTMLElement).releasePointerCapture(ev.pointerId);
-		} catch {
-			/* ignore */
-		}
+		window.removeEventListener('pointermove', moveDrag);
+		window.removeEventListener('pointerup', endDrag);
+		window.removeEventListener('pointercancel', endDrag);
 	}
+
+	onDestroy(endDrag);
 
 	function measureArea() {
 		const host = desktop();
@@ -148,19 +155,20 @@
 	class:inactive={!active}
 	class:compact
 	class:phone
-	style:left="{posX}px; top:{posY}px; width:{layout.w}px; height:{layout.h}px; z-index:{z}"
+	style:left="{posX}px"
+	style:top="{posY}px"
+	style:width="{layout.w}px"
+	style:height="{layout.h}px"
+	style:z-index={z}
 	onpointerdown={onfocus}
 >
 	<div
 		class="titlebar"
 		class:active
 		onpointerdown={startDrag}
-		onpointermove={moveDrag}
-		onpointerup={endDrag}
-		onpointercancel={endDrag}
 	>
 		{#if winicon}
-			<img class="win-ico" src={winicon} alt="" width="16" height="16" />
+			<img class="win-ico" src={winicon} alt="" width="16" height="16" draggable="false" />
 		{/if}
 		<span class="title">{title}</span>
 		<div class="controls">
@@ -213,7 +221,8 @@
 		padding: 1px 2px;
 		background: linear-gradient(90deg, #808080 0%, #b0b0b0 100%);
 		color: #ececec;
-		cursor: default;
+		cursor: move;
+		touch-action: none;
 	}
 
 	.titlebar.active {
@@ -339,10 +348,6 @@
 	.client :global(> *) {
 		width: 100%;
 		height: 100%;
-	}
-
-	.win-window.compact .titlebar {
-		touch-action: none;
 	}
 
 	.win-window.phone {

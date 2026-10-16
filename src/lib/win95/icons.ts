@@ -1,4 +1,3 @@
-/** Win95-style desktop icons — 32×32, transparent canvas */
 const enc = (svg: string) =>
 	`data:image/svg+xml,${encodeURIComponent(svg.replace(/\n\s*/g, ' ').trim())}`;
 
@@ -20,19 +19,9 @@ export const desktopicons: Record<string, string> = {
 	</svg>`),
 
 	minesweeper: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" shape-rendering="crispEdges">
-		<rect x="3" y="3" width="26" height="26" fill="#bdbdbd" stroke="#000" stroke-width="1"/>
-		<rect x="5" y="5" width="9" height="9" fill="#c0c0c0" stroke="#fff" stroke-width="1"/>
-		<rect x="5" y="5" width="9" height="9" fill="none" stroke="#808080" stroke-width="1"/>
-		<rect x="16" y="5" width="9" height="9" fill="#c0c0c0"/>
-		<text x="20.5" y="12" font-size="7" fill="#0000ff" font-family="Arial" font-weight="bold" text-anchor="middle">1</text>
-		<rect x="5" y="16" width="9" height="9" fill="#c0c0c0"/>
-		<text x="9.5" y="23" font-size="7" fill="#008000" font-family="Arial" font-weight="bold" text-anchor="middle">2</text>
-		<rect x="16" y="16" width="9" height="9" fill="#c0c0c0"/>
-		<circle cx="20.5" cy="20.5" r="3.5" fill="#333"/>
-		<line x1="20.5" y1="17" x2="20.5" y2="24" stroke="#ff0000" stroke-width="1"/>
-		<line x1="17.5" y1="20.5" x2="23.5" y2="20.5" stroke="#ff0000" stroke-width="1"/>
-		<line x1="18.5" y1="18.5" x2="22.5" y2="22.5" stroke="#ff0000" stroke-width="0.8"/>
-		<line x1="22.5" y1="18.5" x2="18.5" y2="22.5" stroke="#ff0000" stroke-width="0.8"/>
+		<rect x="14" y="5" width="3" height="22" fill="#606060" stroke="#000"/>
+		<polygon points="17,6 28,11 17,16" fill="#e10600" stroke="#000"/>
+		<rect x="9" y="26" width="14" height="3" fill="#808080" stroke="#000"/>
 	</svg>`),
 
 	pong: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" shape-rendering="crispEdges">
@@ -99,15 +88,11 @@ export const desktopicons: Record<string, string> = {
 	</svg>`),
 
 	recycle: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" shape-rendering="crispEdges">
-		<rect x="9" y="8" width="14" height="2" fill="#808080"/>
-		<rect x="11" y="6" width="10" height="2" fill="#a0a0a0" stroke="#606060"/>
-		<path d="M8 10 L9 28 L23 28 L24 10 Z" fill="#c0c0c0" stroke="#000"/>
-		<path d="M10 12 L11 26 L21 26 L22 12 Z" fill="#a8c8e8"/>
-		<line x1="12" y1="13" x2="11" y2="25" stroke="#606060"/>
-		<line x1="16" y1="13" x2="16" y2="25" stroke="#606060"/>
-		<line x1="20" y1="13" x2="21" y2="25" stroke="#606060"/>
-		<polygon points="14,15 16,12 18,15 17,15 17,18 15,18 15,15" fill="#fff"/>
-		<rect x="13" y="20" width="6" height="4" fill="#fff" opacity="0.6" transform="rotate(-8 16 22)"/>
+		<rect x="12" y="4" width="8" height="3" fill="#d4d4d4" stroke="#000"/>
+		<rect x="6" y="7" width="20" height="4" fill="#c0c0c0" stroke="#000"/>
+		<rect x="8" y="12" width="16" height="15" fill="#b5b5b5" stroke="#000"/>
+		<rect x="12" y="15" width="2" height="9" fill="#808080"/>
+		<rect x="18" y="15" width="2" height="9" fill="#808080"/>
 	</svg>`),
 
 	network: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" shape-rendering="crispEdges">

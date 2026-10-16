@@ -15,15 +15,15 @@
 			<p class="ver">Version 4.00.950 web edition</p>
 		</div>
 	</div>
-	<p class="copy">A browser-based tribute to the classic desktop.</p>
+	<p class="copy">A win95 inspired desktop.</p>
 	<p class="body">
-		This web desktop includes games and accessories inspired by the Windows 95 era.
+		includes games and accessories inspired by the Windows 95 era.
 	</p>
 	<ul>
-		<li>Stick Fighter — beat the CPU</li>
-		<li>Mine Sweeper — classic grid</li>
-		<li>Pong — arcade paddle duel</li>
-		<li>Paint — pencil, brush, <strong>eraser</strong></li>
+		<li>Stick Fighter</li>
+		<li>Mine Sweeper</li>
+		<li>Pong</li>
+		<li>Draw</li>
 	</ul>
 	<div class="ok-row">
 		<button type="button" class="w95-btn ok">OK</button>

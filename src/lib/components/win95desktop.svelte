@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { win95registry, type win95appid } from '$lib/win95/registry';
+	import Stickfight from '$lib/win95/apps/stickfight.svelte';
 	import { iconfor } from '$lib/win95/icons';
 	import Win95window from '$lib/components/win95window.svelte';
 	import type { Component } from 'svelte';
@@ -237,17 +238,6 @@ You can also launch programs from the Start menu or Run dialog.`);
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="win95" class:booted onclick={() => { startopen = false; submenu = null; }}>
 	<div class="wallpaper" aria-hidden="true"></div>
-	<div class="cloud-layer" aria-hidden="true">
-		<div class="cloud c1"></div>
-		<div class="cloud c2"></div>
-		<div class="cloud c3"></div>
-		<div class="cloud c4"></div>
-		<div class="cloud c5"></div>
-		<div class="cloud c6"></div>
-		<div class="cloud c7"></div>
-		<div class="cloud c8"></div>
-	</div>
-	<div class="wallpaper-grain" aria-hidden="true"></div>
 
 	<div class="desktop" bind:this={desktopEl}>
 		<div class="watermark" aria-hidden="true">
@@ -261,7 +251,7 @@ You can also launch programs from the Start menu or Run dialog.`);
 					type="button"
 					class="icon"
 					class:selected={selected === item.id}
-					style:left="{ICON_PAD + item.col * COL_W}px; top:{ICON_PAD + item.row * ROW_H}px"
+					style:left="{ICON_PAD + item.col * COL_W}px; top:{item.row * ROW_H}px"
 					onclick={(e) => onIconClick(item, e)}
 					ondblclick={(e) => {
 						e.stopPropagation();
@@ -292,6 +282,8 @@ You can also launch programs from the Start menu or Run dialog.`);
 			>
 				{#if win.kind === 'readme'}
 					<pre class="readme">{readmeBody}</pre>
+				{:else if win.appId === 'stickfight'}
+					<Stickfight onclose={() => closewin(win.id)} />
 				{:else if App}
 					<App />
 				{/if}
@@ -467,157 +459,13 @@ You can also launch programs from the Start menu or Run dialog.`);
 		opacity: 1;
 	}
 
-	/* ── Wallpaper: Bliss-style SVG ── */
 	.wallpaper {
 		position: absolute;
 		inset: 0;
-		background: #3d8fd8 url('/win95-wallpaper.svg') center / cover no-repeat;
+		background: #071833 url('/win95-wallpaper.svg') center / cover no-repeat;
+		image-rendering: pixelated;
 	}
 
-	.cloud-layer {
-		position: absolute;
-		inset: 0 0 38%;
-		overflow: hidden;
-		pointer-events: none;
-	}
-
-	.cloud {
-		position: absolute;
-		background: #fff;
-		border-radius: 50%;
-		opacity: 0.94;
-		filter: drop-shadow(0 3px 8px rgba(20, 70, 130, 0.16));
-		will-change: transform;
-	}
-
-	.cloud::before,
-	.cloud::after {
-		content: '';
-		position: absolute;
-		background: #fff;
-		border-radius: 50%;
-	}
-
-	.cloud.c1 {
-		width: 140px;
-		height: 48px;
-		left: 4%;
-		top: 12%;
-		animation: drift-a 118s ease-in-out infinite alternate;
-	}
-	.cloud.c1::before { width: 68px; height: 68px; left: 14px; top: -30px; }
-	.cloud.c1::after { width: 82px; height: 56px; left: 52px; top: -22px; }
-
-	.cloud.c2 {
-		width: 190px;
-		height: 58px;
-		left: 34%;
-		top: 6%;
-		animation: drift-b 152s ease-in-out infinite alternate;
-		animation-delay: -40s;
-	}
-	.cloud.c2::before { width: 92px; height: 82px; left: 18px; top: -38px; }
-	.cloud.c2::after { width: 108px; height: 72px; left: 72px; top: -28px; }
-
-	.cloud.c3 {
-		width: 120px;
-		height: 40px;
-		right: 6%;
-		top: 16%;
-		animation: drift-c 96s ease-in-out infinite alternate;
-		animation-delay: -20s;
-	}
-	.cloud.c3::before { width: 58px; height: 54px; left: 10px; top: -26px; }
-	.cloud.c3::after { width: 68px; height: 46px; left: 44px; top: -18px; }
-
-	.cloud.c4 {
-		width: 155px;
-		height: 46px;
-		left: 14%;
-		top: 26%;
-		animation: drift-b 134s ease-in-out infinite alternate-reverse;
-		animation-delay: -65s;
-	}
-	.cloud.c4::before { width: 72px; height: 64px; left: 16px; top: -30px; }
-	.cloud.c4::after { width: 86px; height: 52px; left: 58px; top: -20px; }
-
-	.cloud.c5 {
-		width: 100px;
-		height: 34px;
-		left: 58%;
-		top: 20%;
-		animation: drift-a 108s ease-in-out infinite alternate-reverse;
-		animation-delay: -12s;
-	}
-	.cloud.c5::before { width: 48px; height: 44px; left: 8px; top: -22px; }
-	.cloud.c5::after { width: 56px; height: 38px; left: 38px; top: -14px; }
-
-	.cloud.c6 {
-		width: 170px;
-		height: 52px;
-		left: 72%;
-		top: 28%;
-		animation: drift-c 142s ease-in-out infinite alternate;
-		animation-delay: -88s;
-	}
-	.cloud.c6::before { width: 80px; height: 70px; left: 20px; top: -32px; }
-	.cloud.c6::after { width: 94px; height: 60px; left: 68px; top: -24px; }
-
-	.cloud.c7 {
-		width: 88px;
-		height: 30px;
-		left: 42%;
-		top: 32%;
-		animation: drift-a 88s ease-in-out infinite alternate;
-		animation-delay: -35s;
-		opacity: 0.82;
-	}
-	.cloud.c7::before { width: 42px; height: 38px; left: 6px; top: -18px; }
-	.cloud.c7::after { width: 50px; height: 34px; left: 32px; top: -12px; }
-
-	.cloud.c8 {
-		width: 110px;
-		height: 36px;
-		left: 82%;
-		top: 10%;
-		animation: drift-b 124s ease-in-out infinite alternate-reverse;
-		animation-delay: -52s;
-		opacity: 0.88;
-	}
-	.cloud.c8::before { width: 54px; height: 48px; left: 10px; top: -22px; }
-	.cloud.c8::after { width: 62px; height: 42px; left: 42px; top: -16px; }
-
-	@keyframes drift-a {
-		from { transform: translateX(-4vw) translateY(0); }
-		to { transform: translateX(5vw) translateY(-6px); }
-	}
-
-	@keyframes drift-b {
-		from { transform: translateX(3vw) translateY(2px); }
-		to { transform: translateX(-6vw) translateY(-4px); }
-	}
-
-	@keyframes drift-c {
-		from { transform: translateX(-2vw) translateY(-3px); }
-		to { transform: translateX(7vw) translateY(3px); }
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.cloud {
-			animation: none;
-		}
-	}
-
-	.wallpaper-grain {
-		position: absolute;
-		inset: 0;
-		opacity: 0.035;
-		pointer-events: none;
-		mix-blend-mode: overlay;
-		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-	}
-
-	/* ── Desktop ── */
 	.desktop {
 		position: relative;
 		flex: 1;
@@ -652,6 +500,15 @@ You can also launch programs from the Start menu or Run dialog.`);
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
+	}
+
+	@media (min-width: 1024px) {
+		.icon-grid {
+			top: 50%;
+			bottom: auto;
+			height: 300px;
+			transform: translateY(-50%);
+		}
 	}
 
 	.icon-grid .icon {
@@ -738,7 +595,6 @@ You can also launch programs from the Start menu or Run dialog.`);
 		max-width: calc(100% - 24px);
 	}
 
-	/* ── Taskbar ── */
 	.taskbar {
 		position: relative;
 		z-index: 55;
@@ -896,7 +752,6 @@ You can also launch programs from the Start menu or Run dialog.`);
 		color: #404040;
 	}
 
-	/* ── Start menu ── */
 	.start-menu {
 		position: absolute;
 		left: 4px;
@@ -1022,7 +877,6 @@ You can also launch programs from the Start menu or Run dialog.`);
 	.submenu.l1 { top: 4px; }
 	.submenu.l2 { top: 0; }
 
-	/* ── Run dialog ── */
 	.run-overlay {
 		position: fixed;
 		inset: 0;
@@ -1120,9 +974,12 @@ You can also launch programs from the Start menu or Run dialog.`);
 		.icon-grid {
 			display: grid;
 			grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+			align-content: safe center;
 			gap: 2px 4px;
-			padding: 10px 8px 56px;
+			padding: 12px 8px;
 			max-width: 100%;
+			height: auto;
+			transform: none;
 		}
 
 		.icon {

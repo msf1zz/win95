@@ -14,7 +14,7 @@
 	let tool = $state<'pencil' | 'eraser' | 'brush'>('pencil');
 	let color = $state('#000000');
 	let brush = $state(3);
-	let status = $state('For Help, click Help Topics on the Help Menu.');
+	let status = $state('dubi doggy.');
 	let toolbarEl: HTMLDivElement;
 
 	onMount(() => {
